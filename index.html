@@ -1,386 +1,399 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  PlusCircle, 
-  History, 
-  Wallet, 
-  CheckCircle2, 
-  XCircle, 
-  Clock,
-  ChevronRight,
-  Settings,
-  Lock,
-  LogOut,
-  Save,
-  ShieldCheck,
-  UserCircle,
-  ArrowLeft,
-  Smartphone
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PinjamCepat - Aplikasi Pinjaman Harian</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
 
-const App = () => {
-  // Routing State: 'user' atau 'admin'
-  const [appMode, setAppMode] = useState('user'); 
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  // Database State (Global)
-  const [loans, setLoans] = useState([
-    {
-      id: 'L-001',
-      name: 'Budi Santoso',
-      nik: '3201010101010001',
-      amount: 500000,
-      tenor: 24,
-      interest: 100000,
-      adminFee: 25000,
-      savings: 25000,
-      received: 450000,
-      total: 600000,
-      installment: 25000,
-      status: 'approved',
-      date: '2024-05-01'
-    },
-    {
-      id: 'L-002',
-      name: 'Siti Aminah',
-      nik: '3201010101010002',
-      amount: 1000000,
-      tenor: 24,
-      interest: 200000,
-      adminFee: 50000,
-      savings: 50000,
-      received: 900000,
-      total: 1200000,
-      installment: 50000,
-      status: 'pending',
-      date: '2024-05-03'
-    }
-  ]);
+    <div id="app">
+        <!-- Render App Here -->
+    </div>
 
-  // Pengaturan Global
-  const [config, setConfig] = useState({
-    interestRate: 0.20,
-    adminFeeRate: 0.05,
-    savingsRate: 0.05,
-    appName: "PinjamCepat"
-  });
+    <script>
+        // State Management Sederhana
+        let state = {
+            appMode: 'user', // user, admin-login, admin
+            activeTab: 'dashboard', // dashboard, apply, history, queue, settings
+            isAuthenticated: false,
+            config: {
+                interestRate: 0.20,
+                adminFeeRate: 0.05,
+                savingsRate: 0.05,
+                appName: "PinjamCepat"
+            },
+            loans: [
+                {
+                    id: 'L-001',
+                    name: 'Budi Santoso',
+                    nik: '3201010101010001',
+                    amount: 500000,
+                    tenor: 24,
+                    status: 'approved',
+                    total: 600000,
+                    received: 450000,
+                    installment: 25000,
+                    date: '2024-05-01'
+                },
+                {
+                    id: 'L-002',
+                    name: 'Siti Aminah',
+                    nik: '3201010101010002',
+                    amount: 1000000,
+                    tenor: 24,
+                    status: 'pending',
+                    total: 1200000,
+                    received: 900000,
+                    installment: 50000,
+                    date: '2024-05-03'
+                }
+            ],
+            formData: { name: '', nik: '', amount: '', tenor: '24' }
+        };
 
-  // Fungsi utilitas format uang
-  const formatIDR = (val) => new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 0
-  }).format(val);
+        // Utilitas
+        const formatIDR = (val) => new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0
+        }).format(val);
 
-  // --- KOMPONEN APLIKASI USER ---
-  const UserApp = () => {
-    const [formData, setFormData] = useState({ name: '', nik: '', amount: '', tenor: '24' });
+        function updateView() {
+            const app = document.getElementById('app');
+            
+            if (state.appMode === 'user') {
+                renderUserApp(app);
+            } else if (state.appMode === 'admin-login') {
+                renderAdminLogin(app);
+            } else if (state.appMode === 'admin') {
+                renderAdminApp(app);
+            }
+            
+            // Re-initialize Lucide Icons
+            lucide.createIcons();
+        }
 
-    const calc = {
-      amount: Number(formData.amount || 0),
-      interest: Number(formData.amount || 0) * config.interestRate,
-      fee: Number(formData.amount || 0) * config.adminFeeRate,
-      save: Number(formData.amount || 0) * config.savingsRate,
-    };
-    calc.received = calc.amount - (calc.fee + calc.save);
-    calc.total = calc.amount + calc.interest;
-    calc.daily = calc.total / parseInt(formData.tenor);
-
-    const handleApply = (e) => {
-      e.preventDefault();
-      const newLoan = {
-        id: `L-0${loans.length + 1}`,
-        ...formData,
-        amount: calc.amount,
-        interest: calc.interest,
-        adminFee: calc.fee,
-        savings: calc.save,
-        received: calc.received,
-        total: calc.total,
-        installment: calc.daily,
-        status: 'pending',
-        date: new Date().toISOString().split('T')[0]
-      };
-      setLoans([newLoan, ...loans]);
-      setActiveTab('history');
-    };
-
-    return (
-      <div className="min-h-screen bg-white">
-        {/* Mobile Header */}
-        <div className="p-6 flex justify-between items-center border-b md:hidden">
-          <h1 className="font-bold text-blue-600 text-xl">{config.appName}</h1>
-          <button onClick={() => setAppMode('admin-login')} className="p-2 bg-slate-100 rounded-full">
-            <Lock size={20} className="text-slate-600"/>
-          </button>
-        </div>
-
-        <div className="flex">
-          {/* Sidebar User */}
-          <nav className="hidden md:flex flex-col w-64 h-screen border-r p-6 sticky top-0">
-            <h1 className="text-2xl font-black text-blue-600 mb-10">{config.appName}</h1>
-            <div className="space-y-2">
-              <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${activeTab === 'dashboard' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>
-                <LayoutDashboard size={20}/> Dashboard
-              </button>
-              <button onClick={() => setActiveTab('apply')} className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${activeTab === 'apply' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>
-                <PlusCircle size={20}/> Ajukan Pinjaman
-              </button>
-              <button onClick={() => setActiveTab('history')} className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${activeTab === 'history' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>
-                <History size={20}/> Riwayat
-              </button>
-            </div>
-            <button onClick={() => setAppMode('admin-login')} className="mt-auto flex items-center gap-2 p-3 text-slate-400 hover:text-blue-600 text-sm">
-              <Lock size={16}/> Portal Admin
-            </button>
-          </nav>
-
-          {/* Content User */}
-          <main className="flex-1 p-6 md:p-12 max-w-4xl">
-            {activeTab === 'dashboard' && (
-              <div className="space-y-8 animate-in fade-in">
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl">
-                  <p className="opacity-80 text-sm font-medium">Selamat Datang di {config.appName}</p>
-                  <h2 className="text-3xl font-bold mt-1">Butuh Dana Cepat?</h2>
-                  <p className="mt-4 text-blue-100 max-w-md">Dapatkan pinjaman harian dengan proses verifikasi instan dan bunga kompetitif.</p>
-                  <button onClick={() => setActiveTab('apply')} className="mt-6 bg-white text-blue-600 px-6 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-transform">
-                    Ajukan Sekarang
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                    <Clock className="text-amber-500 mb-2" size={24}/>
-                    <p className="text-xs font-bold text-slate-400 uppercase">Proses</p>
-                    <p className="text-xl font-bold text-slate-800">5 Menit</p>
-                  </div>
-                  <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                    <ShieldCheck className="text-emerald-500 mb-2" size={24}/>
-                    <p className="text-xs font-bold text-slate-400 uppercase">Keamanan</p>
-                    <p className="text-xl font-bold text-slate-800">Terverifikasi</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'apply' && (
-              <div className="animate-in slide-in-from-bottom-4">
-                <h2 className="text-2xl font-bold mb-6">Form Pengajuan</h2>
-                <form onSubmit={handleApply} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" placeholder="Nama Lengkap" required className="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 border-none" onChange={e => setFormData({...formData, name: e.target.value})}/>
-                    <input type="text" placeholder="NIK" required className="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 border-none" onChange={e => setFormData({...formData, nik: e.target.value})}/>
-                    <input type="number" placeholder="Jumlah (Rp)" required className="p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 border-none" onChange={e => setFormData({...formData, amount: e.target.value})}/>
-                    <select className="p-4 bg-slate-50 rounded-2xl outline-none border-none" onChange={e => setFormData({...formData, tenor: e.target.value})}>
-                      <option value="24">24 Hari</option>
-                      <option value="30">30 Hari</option>
-                    </select>
-                  </div>
-                  
-                  <div className="bg-slate-900 text-white p-6 rounded-3xl space-y-3">
-                    <div className="flex justify-between text-sm opacity-70"><span>Estimasi Cair:</span> <span>{formatIDR(calc.received)}</span></div>
-                    <div className="flex justify-between text-sm opacity-70"><span>Total Kembali:</span> <span>{formatIDR(calc.total)}</span></div>
-                    <div className="flex justify-between font-bold text-lg pt-2 border-t border-slate-800"><span>Cicilan/Hari:</span> <span className="text-blue-400">{formatIDR(calc.daily)}</span></div>
-                  </div>
-                  
-                  <button className="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold shadow-lg">Kirim Pengajuan</button>
-                </form>
-              </div>
-            )}
-
-            {activeTab === 'history' && (
-              <div className="animate-in fade-in">
-                <h2 className="text-2xl font-bold mb-6">Status Pinjaman Anda</h2>
-                <div className="space-y-4">
-                  {loans.map(loan => (
-                    <div key={loan.id} className="p-5 border rounded-3xl flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-2xl ${loan.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                          {loan.status === 'approved' ? <CheckCircle2 size={20}/> : <Clock size={20}/>}
+        // --- RENDER USER APP ---
+        function renderUserApp(container) {
+            let content = '';
+            
+            if (state.activeTab === 'dashboard') {
+                content = `
+                    <div class="space-y-8 animate-in">
+                        <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl">
+                            <p class="opacity-80 text-sm font-medium">Selamat Datang di ${state.config.appName}</p>
+                            <h2 class="text-3xl font-bold mt-1">Butuh Dana Cepat?</h2>
+                            <p class="mt-4 text-blue-100 max-w-md">Dapatkan pinjaman harian dengan proses verifikasi instan dan bunga kompetitif.</p>
+                            <button onclick="navigate('apply')" class="mt-6 bg-white text-blue-600 px-6 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-transform">
+                                Ajukan Sekarang
+                            </button>
                         </div>
-                        <div>
-                          <p className="font-bold text-sm">{formatIDR(loan.amount)}</p>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold">{loan.date}</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                                <i data-lucide="clock" class="text-amber-500 mb-2"></i>
+                                <p class="text-xs font-bold text-slate-400 uppercase">Proses</p>
+                                <p class="text-xl font-bold text-slate-800">5 Menit</p>
+                            </div>
+                            <div class="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                                <i data-lucide="shield-check" class="text-emerald-500 mb-2"></i>
+                                <p class="text-xs font-bold text-slate-400 uppercase">Keamanan</p>
+                                <p class="text-xl font-bold text-slate-800">Terverifikasi</p>
+                            </div>
                         </div>
-                      </div>
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${loan.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {loan.status}
-                      </span>
                     </div>
-                  ))}
+                `;
+            } else if (state.activeTab === 'apply') {
+                const amount = Number(state.formData.amount || 0);
+                const interest = amount * state.config.interestRate;
+                const fee = amount * state.config.adminFeeRate;
+                const save = amount * state.config.savingsRate;
+                const received = amount - (fee + save);
+                const total = amount + interest;
+                const daily = total / parseInt(state.formData.tenor);
+
+                content = `
+                    <div class="animate-in">
+                        <h2 class="text-2xl font-bold mb-6">Form Pengajuan</h2>
+                        <form onsubmit="handleApply(event)" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="text" placeholder="Nama Lengkap" required class="p-4 bg-white rounded-2xl border outline-none focus:ring-2 focus:ring-blue-500" oninput="state.formData.name = this.value">
+                                <input type="text" placeholder="NIK" required class="p-4 bg-white rounded-2xl border outline-none focus:ring-2 focus:ring-blue-500" oninput="state.formData.nik = this.value">
+                                <input type="number" placeholder="Jumlah (Rp)" required class="p-4 bg-white rounded-2xl border outline-none focus:ring-2 focus:ring-blue-500" oninput="updateFormAmount(this.value)">
+                                <select class="p-4 bg-white rounded-2xl border outline-none" onchange="state.formData.tenor = this.value; updateView()">
+                                    <option value="24" ${state.formData.tenor === '24' ? 'selected' : ''}>24 Hari</option>
+                                    <option value="30" ${state.formData.tenor === '30' ? 'selected' : ''}>30 Hari</option>
+                                </select>
+                            </div>
+                            <div class="bg-slate-900 text-white p-6 rounded-3xl space-y-3 shadow-xl">
+                                <div class="flex justify-between text-sm opacity-70"><span>Estimasi Cair:</span> <span>${formatIDR(received)}</span></div>
+                                <div class="flex justify-between text-sm opacity-70"><span>Total Kembali:</span> <span>${formatIDR(total)}</span></div>
+                                <div class="flex justify-between font-bold text-lg pt-2 border-t border-slate-800"><span>Cicilan/Hari:</span> <span class="text-blue-400">${formatIDR(daily || 0)}</span></div>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold shadow-lg hover:bg-blue-700">Kirim Pengajuan</button>
+                        </form>
+                    </div>
+                `;
+            } else if (state.activeTab === 'history') {
+                content = `
+                    <div class="animate-in">
+                        <h2 class="text-2xl font-bold mb-6">Status Pinjaman Anda</h2>
+                        <div class="space-y-4">
+                            ${state.loans.map(loan => `
+                                <div class="p-5 bg-white border rounded-3xl flex justify-between items-center shadow-sm">
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-3 rounded-2xl ${loan.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">
+                                            <i data-lucide="${loan.status === 'approved' ? 'check-circle-2' : 'clock'}"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-sm">${formatIDR(loan.amount)}</p>
+                                            <p class="text-[10px] text-slate-400 uppercase font-bold">${loan.date}</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-black px-3 py-1 rounded-full uppercase ${loan.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                                        ${loan.status}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="min-h-screen bg-slate-50">
+                    <div class="p-6 flex justify-between items-center bg-white border-b md:hidden sticky top-0 z-10">
+                        <h1 class="font-bold text-blue-600 text-xl">${state.config.appName}</h1>
+                        <button onclick="changeMode('admin-login')" class="p-2 bg-slate-100 rounded-full"><i data-lucide="lock" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="flex">
+                        <nav class="hidden md:flex flex-col w-64 h-screen bg-white border-r p-6 sticky top-0">
+                            <h1 class="text-2xl font-black text-blue-600 mb-10">${state.config.appName}</h1>
+                            <div class="space-y-2">
+                                <button onclick="navigate('dashboard')" class="w-full flex items-center gap-3 p-3 rounded-xl font-medium ${state.activeTab === 'dashboard' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}"><i data-lucide="layout-dashboard"></i> Dashboard</button>
+                                <button onclick="navigate('apply')" class="w-full flex items-center gap-3 p-3 rounded-xl font-medium ${state.activeTab === 'apply' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}"><i data-lucide="plus-circle"></i> Ajukan</button>
+                                <button onclick="navigate('history')" class="w-full flex items-center gap-3 p-3 rounded-xl font-medium ${state.activeTab === 'history' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}"><i data-lucide="history"></i> Riwayat</button>
+                            </div>
+                            <button onclick="changeMode('admin-login')" class="mt-auto flex items-center gap-2 p-3 text-slate-400 hover:text-blue-600 text-sm font-bold transition-colors">
+                                <i data-lucide="lock" class="w-4 h-4"></i> Portal Admin
+                            </button>
+                        </nav>
+                        <main class="flex-1 p-6 md:p-12 max-w-4xl">${content}</main>
+                    </div>
+                    <nav class="fixed bottom-0 w-full bg-white border-t flex justify-around p-4 md:hidden shadow-lg">
+                        <button onclick="navigate('dashboard')" class="${state.activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-400'}"><i data-lucide="layout-dashboard"></i></button>
+                        <button onclick="navigate('apply')" class="${state.activeTab === 'apply' ? 'text-blue-600' : 'text-slate-400'}"><i data-lucide="plus-circle"></i></button>
+                        <button onclick="navigate('history')" class="${state.activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'}"><i data-lucide="history"></i></button>
+                    </nav>
                 </div>
-              </div>
-            )}
-          </main>
-        </div>
+            `;
+        }
 
-        {/* User Mobile Nav */}
-        <nav className="fixed bottom-0 w-full bg-white border-t flex justify-around p-3 md:hidden">
-          <button onClick={() => setActiveTab('dashboard')} className={activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-400'}><LayoutDashboard/></button>
-          <button onClick={() => setActiveTab('apply')} className={activeTab === 'apply' ? 'text-blue-600' : 'text-slate-400'}><PlusCircle/></button>
-          <button onClick={() => setActiveTab('history')} className={activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'}><History/></button>
-        </nav>
-      </div>
-    );
-  };
-
-  // --- KOMPONEN APLIKASI ADMIN ---
-  const AdminApp = () => {
-    const [adminTab, setAdminTab] = useState('queue');
-
-    const updateStatus = (id, status) => {
-      setLoans(loans.map(l => l.id === id ? {...l, status} : l));
-    };
-
-    return (
-      <div className="min-h-screen bg-slate-50 flex">
-        {/* Sidebar Admin */}
-        <aside className="w-64 bg-slate-900 text-white flex flex-col p-6 sticky top-0 h-screen">
-          <div className="flex items-center gap-2 mb-10 text-blue-400">
-            <ShieldCheck size={28}/>
-            <span className="font-black text-xl tracking-tight">ADMIN PANEL</span>
-          </div>
-          
-          <nav className="space-y-2 flex-1">
-            <button onClick={() => setAdminTab('queue')} className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold ${adminTab === 'queue' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
-              <Clock size={18}/> Antrean Pengajuan
-            </button>
-            <button onClick={() => setAdminTab('settings')} className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold ${adminTab === 'settings' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
-              <Settings size={18}/> Pengaturan Sistem
-            </button>
-          </nav>
-
-          <div className="pt-6 border-t border-slate-800 space-y-2">
-            <button onClick={() => setAppMode('user')} className="w-full flex items-center gap-3 p-3 text-sm font-bold text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all">
-              <Smartphone size={18}/> Mode Aplikasi
-            </button>
-            <button onClick={() => {setIsAuthenticated(false); setAppMode('user');}} className="w-full flex items-center gap-3 p-3 text-sm font-bold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all">
-              <LogOut size={18}/> Logout
-            </button>
-          </div>
-        </aside>
-
-        {/* Content Admin */}
-        <main className="flex-1 p-8">
-          {adminTab === 'queue' && (
-            <div className="animate-in fade-in">
-              <div className="mb-8">
-                <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Verifikasi Pinjaman</h2>
-                <p className="text-slate-500 mt-1">Tinjau dan proses permohonan nasabah yang masuk.</p>
-              </div>
-
-              <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <th className="px-6 py-4">Nasabah</th>
-                      <th className="px-6 py-4">Nominal</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-right">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {loans.filter(l => l.status === 'pending').map(loan => (
-                      <tr key={loan.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-5">
-                          <p className="font-bold text-slate-800">{loan.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">{loan.nik}</p>
-                        </td>
-                        <td className="px-6 py-5">
-                          <p className="font-black text-blue-600">{formatIDR(loan.amount)}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">{loan.tenor} Hari</p>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">Pending</span>
-                        </td>
-                        <td className="px-6 py-5 text-right space-x-2">
-                          <button onClick={() => updateStatus(loan.id, 'approved')} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100">Setujui</button>
-                          <button onClick={() => updateStatus(loan.id, 'rejected')} className="bg-rose-500 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-600 transition-all shadow-md shadow-rose-100">Tolak</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {loans.filter(l => l.status === 'pending').length === 0 && (
-                  <div className="p-20 text-center text-slate-300">
-                    <CheckCircle2 size={48} className="mx-auto mb-4 opacity-20"/>
-                    <p className="font-bold">Antrean Bersih</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {adminTab === 'settings' && (
-            <div className="max-w-2xl animate-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold mb-6">Konfigurasi Global</h2>
-              <div className="bg-white p-8 rounded-[2rem] shadow-sm border space-y-6">
-                <div>
-                  <label className="text-xs font-black text-slate-400 uppercase block mb-2">Nama Aplikasi</label>
-                  <input type="text" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold" value={config.appName} onChange={e => setConfig({...config, appName: e.target.value})}/>
+        // --- RENDER ADMIN LOGIN ---
+        function renderAdminLogin(container) {
+            container.innerHTML = `
+                <div class="min-h-screen bg-slate-900 flex items-center justify-center p-6">
+                    <div class="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl animate-in">
+                        <button onclick="changeMode('user')" class="mb-6 flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold transition-colors">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali
+                        </button>
+                        <div class="text-center mb-8">
+                            <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-4"><i data-lucide="lock" class="w-8 h-8"></i></div>
+                            <h2 class="text-2xl font-black text-slate-800">Admin Portal</h2>
+                            <p class="text-sm text-slate-400">Gunakan akses resmi administrator.</p>
+                        </div>
+                        <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                            <input type="text" id="adminUser" placeholder="Username" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold border-none">
+                            <input type="password" id="adminPin" placeholder="PIN Keamanan" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold border-none">
+                            <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-blue-700 transition-all">Verifikasi Akses</button>
+                        </form>
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-slate-400 uppercase block mb-2">Bunga (0.20 = 20%)</label>
-                    <input type="number" step="0.01" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold" value={config.interestRate} onChange={e => setConfig({...config, interestRate: parseFloat(e.target.value)})}/>
-                  </div>
-                  <div>
-                    <label className="text-xs font-black text-slate-400 uppercase block mb-2">Admin Fee (0.05 = 5%)</label>
-                    <input type="number" step="0.01" className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold" value={config.adminFeeRate} onChange={e => setConfig({...config, adminFeeRate: parseFloat(e.target.value)})}/>
-                  </div>
+            `;
+        }
+
+        // --- RENDER ADMIN APP ---
+        function renderAdminApp(container) {
+            let content = '';
+            
+            if (state.activeTab === 'queue') {
+                const pendingLoans = state.loans.filter(l => l.status === 'pending');
+                content = `
+                    <div class="animate-in">
+                        <div class="mb-8">
+                            <h2 class="text-3xl font-black text-slate-800 uppercase tracking-tighter">Antrean Verifikasi</h2>
+                            <p class="text-slate-500">Tinjau permohonan yang masuk hari ini.</p>
+                        </div>
+                        <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 border-b border-slate-100">
+                                    <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <th class="px-6 py-4">Nasabah</th>
+                                        <th class="px-6 py-4">Nominal</th>
+                                        <th class="px-6 py-4">Status</th>
+                                        <th class="px-6 py-4 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-50">
+                                    ${pendingLoans.map(loan => `
+                                        <tr class="hover:bg-slate-50/50 transition-colors">
+                                            <td class="px-6 py-5">
+                                                <p class="font-bold text-slate-800">${loan.name}</p>
+                                                <p class="text-[10px] text-slate-400 font-mono">${loan.nik}</p>
+                                            </td>
+                                            <td class="px-6 py-5">
+                                                <p class="font-black text-blue-600">${formatIDR(loan.amount)}</p>
+                                                <p class="text-[10px] text-slate-400 font-bold">${loan.tenor} HARI</p>
+                                            </td>
+                                            <td class="px-6 py-5">
+                                                <span class="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">Pending</span>
+                                            </td>
+                                            <td class="px-6 py-5 text-right space-x-2">
+                                                <button onclick="updateLoanStatus('${loan.id}', 'approved')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700">Setujui</button>
+                                                <button onclick="updateLoanStatus('${loan.id}', 'rejected')" class="bg-rose-500 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-600">Tolak</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            ${pendingLoans.length === 0 ? '<div class="p-20 text-center text-slate-300 font-bold">Antrean Kosong</div>' : ''}
+                        </div>
+                    </div>
+                `;
+            } else if (state.activeTab === 'settings') {
+                content = `
+                    <div class="max-w-2xl animate-in">
+                        <h2 class="text-2xl font-bold mb-6">Konfigurasi Sistem</h2>
+                        <div class="bg-white p-8 rounded-[2rem] shadow-sm border space-y-6">
+                            <div>
+                                <label class="text-xs font-black text-slate-400 uppercase block mb-2">Nama Aplikasi</label>
+                                <input type="text" class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold" value="${state.config.appName}" oninput="state.config.appName = this.value">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs font-black text-slate-400 uppercase block mb-2">Bunga (0.2 = 20%)</label>
+                                    <input type="number" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold" value="${state.config.interestRate}" oninput="state.config.interestRate = parseFloat(this.value)">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-black text-slate-400 uppercase block mb-2">Admin Fee (0.05 = 5%)</label>
+                                    <input type="number" step="0.01" class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold" value="${state.config.adminFeeRate}" oninput="state.config.adminFeeRate = parseFloat(this.value)">
+                                </div>
+                            </div>
+                            <button onclick="alert('Pengaturan Tersimpan'); navigate('queue')" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl hover:bg-black">
+                                <i data-lucide="save" class="w-5 h-5"></i> Simpan Perubahan
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="min-h-screen bg-slate-50 flex">
+                    <aside class="w-64 bg-slate-900 text-white flex flex-col p-6 sticky top-0 h-screen">
+                        <div class="flex items-center gap-2 mb-10 text-blue-400">
+                            <i data-lucide="shield-check" class="w-7 h-7"></i>
+                            <span class="font-black text-xl tracking-tight">ADMIN PANEL</span>
+                        </div>
+                        <nav class="space-y-2 flex-1">
+                            <button onclick="navigate('queue')" class="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold ${state.activeTab === 'queue' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}"><i data-lucide="clock" class="w-4 h-4"></i> Antrean</button>
+                            <button onclick="navigate('settings')" class="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold ${state.activeTab === 'settings' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}"><i data-lucide="settings" class="w-4 h-4"></i> Pengaturan</button>
+                        </nav>
+                        <div class="pt-6 border-t border-slate-800 space-y-2">
+                            <button onclick="changeMode('user')" class="w-full flex items-center gap-3 p-3 text-sm font-bold text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all">
+                                <i data-lucide="smartphone" class="w-4 h-4"></i> Mode Aplikasi
+                            </button>
+                            <button onclick="logout()" class="w-full flex items-center gap-3 p-3 text-sm font-bold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all">
+                                <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                            </button>
+                        </div>
+                    </aside>
+                    <main class="flex-1 p-8">${content}</main>
                 </div>
-                <button onClick={() => alert("Pengaturan Disimpan")} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all">
-                  <Save size={20}/> Simpan Perubahan
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-    );
-  };
+            `;
+        }
 
-  // --- HALAMAN LOGIN ADMIN ---
-  const AdminLogin = () => {
-    const [data, setData] = useState({ user: '', pin: '' });
-    const handleLogin = (e) => {
-      e.preventDefault();
-      if (data.user === 'abadilestarimandiri' && data.pin === '240991') {
-        setIsAuthenticated(true);
-        setAppMode('admin');
-      } else {
-        alert("Akses Ditolak!");
-      }
-    };
+        // --- HANDLER FUNGSI ---
 
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-        <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl animate-in zoom-in-95">
-          <button onClick={() => setAppMode('user')} className="mb-6 flex items-center gap-2 text-slate-400 hover:text-slate-800 transition-colors">
-            <ArrowLeft size={18}/> Kembali ke Aplikasi
-          </button>
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-4">
-              <Lock size={32}/>
-            </div>
-            <h2 className="text-2xl font-black text-slate-800">Admin Portal</h2>
-            <p className="text-sm text-slate-400">Masukkan kredensial khusus administrator.</p>
-          </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input type="text" placeholder="Username" required className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold border-none" onChange={e => setData({...data, user: e.target.value})}/>
-            <input type="password" placeholder="PIN Keamanan" required className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold border-none" onChange={e => setData({...data, pin: e.target.value})}/>
-            <button className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all">Verifikasi Akses</button>
-          </form>
-        </div>
-      </div>
-    );
-  };
+        function navigate(tab) {
+            state.activeTab = tab;
+            updateView();
+        }
 
-  // RENDER UTAMA
-  if (appMode === 'admin-login') return <AdminLogin />;
-  if (appMode === 'admin' && isAuthenticated) return <AdminApp />;
-  return <UserApp />;
-};
+        function changeMode(mode) {
+            state.appMode = mode;
+            if (mode === 'admin') state.activeTab = 'queue';
+            if (mode === 'user') state.activeTab = 'dashboard';
+            updateView();
+        }
 
-export default App;
+        function updateFormAmount(val) {
+            state.formData.amount = val;
+            updateView();
+        }
+
+        function handleApply(e) {
+            e.preventDefault();
+            const amount = Number(state.formData.amount);
+            const tenor = parseInt(state.formData.tenor);
+            const interest = amount * state.config.interestRate;
+            
+            const newLoan = {
+                id: `L-0${state.loans.length + 1}`,
+                name: state.formData.name,
+                nik: state.formData.nik,
+                amount: amount,
+                tenor: tenor,
+                status: 'pending',
+                total: amount + interest,
+                received: amount - (amount * (state.config.adminFeeRate + state.config.savingsRate)),
+                installment: (amount + interest) / tenor,
+                date: new Date().toISOString().split('T')[0]
+            };
+            
+            state.loans = [newLoan, ...state.loans];
+            state.formData = { name: '', nik: '', amount: '', tenor: '24' };
+            navigate('history');
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('adminUser').value;
+            const pin = document.getElementById('adminPin').value;
+            
+            if (user === 'abadilestarimandiri' && pin === '240991') {
+                state.isAuthenticated = true;
+                changeMode('admin');
+            } else {
+                alert("Akses Ditolak!");
+            }
+        }
+
+        function updateLoanStatus(id, status) {
+            state.loans = state.loans.map(l => l.id === id ? {...l, status} : l);
+            updateView();
+        }
+
+        function logout() {
+            state.isAuthenticated = false;
+            changeMode('user');
+        }
+
+        // Inisialisasi awal
+        window.onload = updateView;
+
+    </script>
+</body>
+</html>
